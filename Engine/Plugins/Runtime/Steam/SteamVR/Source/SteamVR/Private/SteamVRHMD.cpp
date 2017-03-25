@@ -223,6 +223,11 @@ bool FSteamVRHMD::IsHMDEnabled() const
 	return bHmdEnabled;
 }
 
+bool FSteamVRHMD::IsHMDDisabled() const
+{
+	return !bHmdEnabled;
+}
+
 EHMDWornState::Type FSteamVRHMD::GetHMDWornState()
 {
 	//HmdWornState is set in OnStartGameFrame's event loop
