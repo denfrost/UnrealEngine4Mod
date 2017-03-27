@@ -67,3 +67,16 @@ bool USteamVRFunctionLibrary::GetHandPositionAndOrientation(int32 ControllerInde
 
 	return RetVal;
 }
+
+FSteamVRRenderDelegate* USteamVRFunctionLibrary::GetMirrorDelegate_RenderThread()
+{
+#if STEAMVR_SUPPORTED_PLATFORMS
+	check(IsInRenderingThread());
+	FSteamVRHMD* SteamVRHMD = GetSteamVRHMD();
+	if (SteamVRHMD)
+	{
+		return SteamVRHMD->GetMirrorRenderDelegate();
+	}
+#endif
+	return nullptr;
+}
