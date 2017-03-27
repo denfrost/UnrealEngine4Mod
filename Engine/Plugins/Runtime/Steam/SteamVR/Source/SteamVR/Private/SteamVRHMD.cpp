@@ -1634,4 +1634,9 @@ const FSteamVRHMD::FTrackingFrame& FSteamVRHMD::GetTrackingFrame() const
 	}
 }
 
+FSteamVRRenderDelegate* FSteamVRHMD::GetMirrorRenderDelegate()
+{
+	return &MirrorRenderDelegate;
+}
+
 #endif //STEAMVR_SUPPORTED_PLATFORMS
