@@ -108,6 +108,8 @@ public:
 	virtual void SetTrackingOrigin(EHMDTrackingOrigin::Type NewOrigin) override;
 	virtual EHMDTrackingOrigin::Type GetTrackingOrigin() override;
 
+	virtual FSteamVRRenderDelegate* GetMirrorRenderDelegate();
+	
 	virtual void RecordAnalytics() override;
 
 	/** IStereoRendering interface */
@@ -312,6 +314,8 @@ public:
 private:
 
 	void SetupOcclusionMeshes();
+	
+	FSteamVRRenderDelegate MirrorRenderDelegate;
 
 	bool bHmdEnabled;
 	EHMDWornState::Type HmdWornState;
