@@ -38,20 +38,19 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 		SetRenderTarget(RHICmdList, SrcTexture, FTextureRHIRef());
 		RHICmdList.ClearColorTexture(SrcTexture, FLinearColor(0, 0, 0, 0), FIntRect());
 	}
-
 	const uint32 ViewportWidth = BackBuffer->GetSizeX();
 	const uint32 ViewportHeight = BackBuffer->GetSizeY();
 
 	const FIntRect BackBufferRect = FIntRect(0, 0, ViewportWidth, ViewportHeight);
 	FIntRect DstViewRect = BackBufferRect;
-	FIntRect SrcViewRect = FIntRect(0, 0, ViewportWidth * 2, ViewportHeight * 2);
+	FIntRect SrcViewRect = FIntRect(0, 0, ViewportWidth, ViewportHeight);
 	FRHITexture2D* SpectatorTexture = nullptr;
 	FIntRect SpectatorDstViewRect;
 	FIntRect SpectatorTextureRect;
 
 	if ((CAllowSpectatorTexture.GetValueOnRenderThread() != 0) && MirrorRenderDelegate.IsBound())
 	{
-		SpectatorTexture = MirrorRenderDelegate.Execute(DstViewRect, /*DstViewRect*/ SrcViewRect, SpectatorDstViewRect, SpectatorTextureRect);
+		SpectatorTexture = MirrorRenderDelegate.Execute(DstViewRect, SrcViewRect, SpectatorDstViewRect, SpectatorTextureRect);
 	}
 
 	SetRenderTarget(RHICmdList, BackBuffer, FTextureRHIRef());
@@ -78,14 +77,6 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 
 		const float SrcTextureWidth = SpectatorTexture->GetTexture2D()->GetSizeX();
 		const float SrctextureHeight = SpectatorTexture->GetTexture2D()->GetSizeY();
-		float U = 0.f, V = 0.f, USize = 1.f, VSize = 1.f;
-		if (!SrcRect.IsEmpty())
-		{
-			U = SrcRect.Min.X / SrcTextureWidth;
-			V = SrcRect.Min.Y / SrctextureHeight;
-			USize = SrcRect.Width() / SrcTextureWidth;
-			VSize = SrcRect.Height() / SrctextureHeight;
-		}
 
 		FRHITexture* SrcTextureRHI = SpectatorTexture;
 		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, &SrcTextureRHI, 1);
@@ -102,12 +93,13 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 
 		if (WindowMirrorMode == 1)
 		{
+
 			RendererModule->DrawRectangle(
 				RHICmdList,
 				0, 0,
 				ViewportWidth, ViewportHeight,
-				U, V,
-				USize, VSize,
+				0, 0,
+				1, 1,
 				TargetSize,
 				FIntPoint(1, 1),
 				*VertexShader,
@@ -126,38 +118,32 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 
 	PixelShader->SetParameters(RHICmdList, TStaticSamplerState<SF_Bilinear>::GetRHI(), SrcTexture);
 
-	if (WindowMirrorMode != 0)
+	if (WindowMirrorMode == 1)
 	{
+		RendererModule->DrawRectangle(
+			RHICmdList,
+			0, 0,
+			(ViewportWidth * 3)/ 4, ViewportHeight,
+			0.07f, 0.18f,
+			0.37f, 0.55f,
+			FIntPoint(ViewportWidth, ViewportHeight),
+			FIntPoint(1, 1),
+			*VertexShader,
+			EDRF_Default);
 
-		if (WindowMirrorMode == 1)
-		{
-			// need to clear when rendering only one eye since the borders won't be touched by the DrawRect below
-			RHICmdList.ClearColorTexture(BackBuffer, FLinearColor::Black, FIntRect());
-
-			RendererModule->DrawRectangle(
-				RHICmdList,
-				ViewportWidth / 4, 0,
-				ViewportWidth / 2, ViewportHeight,
-				0.1f, 0.2f,
-				0.3f, 0.6f,
-				FIntPoint(ViewportWidth, ViewportHeight),
-				FIntPoint(1, 1),
-				*VertexShader,
-				EDRF_Default);
-		}
-		else if (WindowMirrorMode == 2)
-		{
-			RendererModule->DrawRectangle(
-				RHICmdList,
-				0, 0,
-				ViewportWidth, ViewportHeight,
-				0.0f, 0.0f,
-				1.0f, 1.0f,
-				FIntPoint(ViewportWidth, ViewportHeight),
-				FIntPoint(1, 1),
-				*VertexShader,
-				EDRF_Default);
-		}
+	}
+	else if (WindowMirrorMode == 2)
+	{
+		RendererModule->DrawRectangle(
+		RHICmdList,
+		0, 0,
+		ViewportWidth, ViewportHeight,
+		0.0f, 0.0f,
+		1.0f, 1.0f,
+		FIntPoint(ViewportWidth, ViewportHeight),
+		FIntPoint(1, 1),
+		*VertexShader,
+		EDRF_Default);
 	}
 }
 
