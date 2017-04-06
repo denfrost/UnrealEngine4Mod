@@ -61,6 +61,46 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 	TShaderMapRef<FScreenVS> VertexShader(ShaderMap);
 	TShaderMapRef<FScreenPS> PixelShader(ShaderMap);
 
+	
+	RHICmdList.SetViewport(0, 0, 0, ViewportWidth, ViewportHeight, 1.0f);
+
+	RHICmdList.SetBlendState(TStaticBlendState<>::GetRHI());
+	RHICmdList.SetRasterizerState(TStaticRasterizerState<>::GetRHI());
+	RHICmdList.SetDepthStencilState(TStaticDepthStencilState<false, CF_Always>::GetRHI());
+
+	static FGlobalBoundShaderState BoundShaderState;
+	SetGlobalBoundShaderState(RHICmdList, FeatureLevel, BoundShaderState, RendererModule->GetFilterVertexDeclaration().VertexDeclarationRHI, *VertexShader, *PixelShader);
+
+	PixelShader->SetParameters(RHICmdList, TStaticSamplerState<SF_Bilinear>::GetRHI(), SrcTexture);
+
+	if (WindowMirrorMode == 1)
+	{
+		RendererModule->DrawRectangle(
+			RHICmdList,
+			0, 0,
+			(ViewportWidth * 3)/ 4, ViewportHeight,
+			0.07f, 0.18f,
+			0.37f, 0.55f,
+			FIntPoint(ViewportWidth, ViewportHeight),
+			FIntPoint(1, 1),
+			*VertexShader,
+			EDRF_Default);
+
+	}
+	else if (WindowMirrorMode == 2)
+	{
+		RendererModule->DrawRectangle(
+		RHICmdList,
+		0, 0,
+		ViewportWidth, ViewportHeight,
+		0.0f, 0.0f,
+		1.0f, 1.0f,
+		FIntPoint(ViewportWidth, ViewportHeight),
+		FIntPoint(1, 1),
+		*VertexShader,
+		EDRF_Default);
+	}
+	
 	if (SpectatorTexture)
 	{
 		FIntRect DstRect = SpectatorDstViewRect;
@@ -107,44 +147,6 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 		}
 	}
 
-	RHICmdList.SetViewport(0, 0, 0, ViewportWidth, ViewportHeight, 1.0f);
-
-	RHICmdList.SetBlendState(TStaticBlendState<>::GetRHI());
-	RHICmdList.SetRasterizerState(TStaticRasterizerState<>::GetRHI());
-	RHICmdList.SetDepthStencilState(TStaticDepthStencilState<false, CF_Always>::GetRHI());
-
-	static FGlobalBoundShaderState BoundShaderState;
-	SetGlobalBoundShaderState(RHICmdList, FeatureLevel, BoundShaderState, RendererModule->GetFilterVertexDeclaration().VertexDeclarationRHI, *VertexShader, *PixelShader);
-
-	PixelShader->SetParameters(RHICmdList, TStaticSamplerState<SF_Bilinear>::GetRHI(), SrcTexture);
-
-	if (WindowMirrorMode == 1)
-	{
-		RendererModule->DrawRectangle(
-			RHICmdList,
-			0, 0,
-			(ViewportWidth * 3)/ 4, ViewportHeight,
-			0.07f, 0.18f,
-			0.37f, 0.55f,
-			FIntPoint(ViewportWidth, ViewportHeight),
-			FIntPoint(1, 1),
-			*VertexShader,
-			EDRF_Default);
-
-	}
-	else if (WindowMirrorMode == 2)
-	{
-		RendererModule->DrawRectangle(
-		RHICmdList,
-		0, 0,
-		ViewportWidth, ViewportHeight,
-		0.0f, 0.0f,
-		1.0f, 1.0f,
-		FIntPoint(ViewportWidth, ViewportHeight),
-		FIntPoint(1, 1),
-		*VertexShader,
-		EDRF_Default);
-	}
 }
 
 static void DrawOcclusionMesh(FRHICommandList& RHICmdList, EStereoscopicPass StereoPass, const FHMDViewMesh MeshAssets[])
