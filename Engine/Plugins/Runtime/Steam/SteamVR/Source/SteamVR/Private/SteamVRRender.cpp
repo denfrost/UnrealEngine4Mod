@@ -23,9 +23,10 @@ void FSteamVRHMD::DrawDistortionMesh_RenderThread(struct FRenderingCompositePass
 {
 	check(0);
 }
-
+#if ENGINE_MODUE4 == 0
 static TAutoConsoleVariable<float> CTopCropOffset(TEXT("vr.TCropOffset"), 0.5f, TEXT("Precentage to offset the top of the letterboxed view"));
 static TAutoConsoleVariable<float> CAllowSpectatorTexture(TEXT("vr.bAllowSpectatorTexture"), 1.f, TEXT("Whether to allow rendering of spectator texture in window"));
+#endif
 
 void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef BackBuffer, FTexture2DRHIParamRef SrcTexture) const
 {
@@ -38,6 +39,7 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 		SetRenderTarget(RHICmdList, SrcTexture, FTextureRHIRef());
 		RHICmdList.ClearColorTexture(SrcTexture, FLinearColor(0, 0, 0, 0), FIntRect());
 	}
+
 	const uint32 ViewportWidth = BackBuffer->GetSizeX();
 	const uint32 ViewportHeight = BackBuffer->GetSizeY();
 
@@ -47,12 +49,12 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 	FRHITexture2D* SpectatorTexture = nullptr;
 	FIntRect SpectatorDstViewRect;
 	FIntRect SpectatorTextureRect;
-
+#if ENGINE_MODUE4 == 0
 	if ((CAllowSpectatorTexture.GetValueOnRenderThread() != 0) && MirrorRenderDelegate.IsBound())
 	{
 		SpectatorTexture = MirrorRenderDelegate.Execute(DstViewRect, SrcViewRect, SpectatorDstViewRect, SpectatorTextureRect);
 	}
-
+#endif
 	SetRenderTarget(RHICmdList, BackBuffer, FTextureRHIRef());
 
 	const auto FeatureLevel = GMaxRHIFeatureLevel;

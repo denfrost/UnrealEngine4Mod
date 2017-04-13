@@ -13,10 +13,11 @@
 /** Up to 8 motion controller devices supported (two VR motion controllers per Unreal controller, one for either the left or right hand.) */
 #define MAX_STEAMVR_CONTROLLER_PAIRS 4
 
+#if ENGINE_MODUE4 == 0
 class FRHITexture2D;
 
 DECLARE_DELEGATE_RetVal_FourParams(FRHITexture2D*, FSteamVRRenderDelegate, FIntRect&/*EyeDstRect*/, FIntRect& /*EyeSrcRect*/, FIntRect& /*SpectatorDstRect*/, FIntRect& /*SpectatorSrcRect*/);
-
+#endif
 
 /**
  * The public interface to this module.  In most cases, this interface is only public to sibling modules 

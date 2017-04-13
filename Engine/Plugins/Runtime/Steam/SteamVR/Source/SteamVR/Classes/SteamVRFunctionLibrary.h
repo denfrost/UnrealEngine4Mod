@@ -31,8 +31,9 @@ UCLASS()
 class STEAMVR_API USteamVRFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_UCLASS_BODY()
-
+#if ENGINE_MODUE4 == 0
 	static FSteamVRRenderDelegate* GetMirrorDelegate_RenderThread();
+#endif
 public:
 	
 	/**

@@ -68,6 +68,7 @@ bool USteamVRFunctionLibrary::GetHandPositionAndOrientation(int32 ControllerInde
 	return RetVal;
 }
 
+#if ENGINE_MODUE4 == 0
 FSteamVRRenderDelegate* USteamVRFunctionLibrary::GetMirrorDelegate_RenderThread()
 {
 #if STEAMVR_SUPPORTED_PLATFORMS
@@ -80,3 +81,4 @@ FSteamVRRenderDelegate* USteamVRFunctionLibrary::GetMirrorDelegate_RenderThread(
 #endif
 	return nullptr;
 }
+#endif
