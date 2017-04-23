@@ -153,3 +153,6 @@
 	VERSION_STRINGIFY(BUILT_FROM_CHANGELIST) \
 	VERSION_TEXT("+") \
 	VERSION_TEXT(BRANCH_NAME)
+
+//Mod UE4 flag for compile official/custome engine build. 
+#define ENGINE_MODUE4 0 //For revert to Official version UE4.15.1 To comment this define and rebuild.

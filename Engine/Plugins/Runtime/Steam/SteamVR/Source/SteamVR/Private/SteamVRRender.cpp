@@ -1,12 +1,19 @@
 // Copyright 1998-2017 Epic Games, Inc. All Rights Reserved.
 //
-#include "CoreMinimal.h"
+//#include "CoreMinimal.h"
 #include "SteamVRPrivate.h"
 #include "SteamVRHMD.h"
 
 #include "RendererPrivate.h"
 #include "ScenePrivate.h"
 #include "PostProcess/PostProcessHMD.h"
+
+#include "Core.h"
+#include "ISteamVRPlugin.h"
+#include "Engine/Canvas.h"
+#include "CanvasItem.h"
+#include "Widgets/SViewport.h"
+#include "Framework/Application/SlateApplication.h"
 
 #if STEAMVR_SUPPORTED_PLATFORMS
 
@@ -16,6 +23,10 @@ void FSteamVRHMD::DrawDistortionMesh_RenderThread(struct FRenderingCompositePass
 {
 	check(0);
 }
+#if ENGINE_MODUE4 == 0
+static TAutoConsoleVariable<float> CTopCropOffset(TEXT("vr.TCropOffset"), 0.5f, TEXT("Precentage to offset the top of the letterboxed view"));
+static TAutoConsoleVariable<float> CAllowSpectatorTexture(TEXT("vr.bAllowSpectatorTexture"), 1.f, TEXT("Whether to allow rendering of spectator texture in window"));
+#endif
 
 void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdList, FTexture2DRHIParamRef BackBuffer, FTexture2DRHIParamRef SrcTexture) const
 {
@@ -29,59 +40,115 @@ void FSteamVRHMD::RenderTexture_RenderThread(FRHICommandListImmediate& RHICmdLis
 		RHICmdList.ClearColorTexture(SrcTexture, FLinearColor(0, 0, 0, 0), FIntRect());
 	}
 
-	if (WindowMirrorMode != 0)
+	const uint32 ViewportWidth = BackBuffer->GetSizeX();
+	const uint32 ViewportHeight = BackBuffer->GetSizeY();
+
+	const FIntRect BackBufferRect = FIntRect(0, 0, ViewportWidth, ViewportHeight);
+	FIntRect DstViewRect = BackBufferRect;
+	FIntRect SrcViewRect = FIntRect(0, 0, ViewportWidth, ViewportHeight);
+	FRHITexture2D* SpectatorTexture = nullptr;
+	FIntRect SpectatorDstViewRect;
+	FIntRect SpectatorTextureRect;
+#if ENGINE_MODUE4 == 0
+	if ((CAllowSpectatorTexture.GetValueOnRenderThread() != 0) && MirrorRenderDelegate.IsBound())
 	{
-		const uint32 ViewportWidth = BackBuffer->GetSizeX();
-		const uint32 ViewportHeight = BackBuffer->GetSizeY();
+		SpectatorTexture = MirrorRenderDelegate.Execute(DstViewRect, SrcViewRect, SpectatorDstViewRect, SpectatorTextureRect);
+	}
+#endif
+	SetRenderTarget(RHICmdList, BackBuffer, FTextureRHIRef());
 
-		SetRenderTarget(RHICmdList, BackBuffer, FTextureRHIRef());
-		RHICmdList.SetViewport(0, 0, 0, ViewportWidth, ViewportHeight, 1.0f);
+	const auto FeatureLevel = GMaxRHIFeatureLevel;
+	auto ShaderMap = GetGlobalShaderMap(FeatureLevel);
 
+	TShaderMapRef<FScreenVS> VertexShader(ShaderMap);
+	TShaderMapRef<FScreenPS> PixelShader(ShaderMap);
+
+	
+	RHICmdList.SetViewport(0, 0, 0, ViewportWidth, ViewportHeight, 1.0f);
+
+	RHICmdList.SetBlendState(TStaticBlendState<>::GetRHI());
+	RHICmdList.SetRasterizerState(TStaticRasterizerState<>::GetRHI());
+	RHICmdList.SetDepthStencilState(TStaticDepthStencilState<false, CF_Always>::GetRHI());
+
+	static FGlobalBoundShaderState BoundShaderState;
+	SetGlobalBoundShaderState(RHICmdList, FeatureLevel, BoundShaderState, RendererModule->GetFilterVertexDeclaration().VertexDeclarationRHI, *VertexShader, *PixelShader);
+
+	PixelShader->SetParameters(RHICmdList, TStaticSamplerState<SF_Bilinear>::GetRHI(), SrcTexture);
+
+	if (WindowMirrorMode == 1)
+	{
+		RendererModule->DrawRectangle(
+			RHICmdList,
+			0, 0,
+			(ViewportWidth * 3)/ 4, ViewportHeight,
+			0.07f, 0.18f,
+			0.37f, 0.55f,
+			FIntPoint(ViewportWidth, ViewportHeight),
+			FIntPoint(1, 1),
+			*VertexShader,
+			EDRF_Default);
+
+	}
+	else if (WindowMirrorMode == 2)
+	{
+		RendererModule->DrawRectangle(
+		RHICmdList,
+		0, 0,
+		ViewportWidth, ViewportHeight,
+		0.0f, 0.0f,
+		1.0f, 1.0f,
+		FIntPoint(ViewportWidth, ViewportHeight),
+		FIntPoint(1, 1),
+		*VertexShader,
+		EDRF_Default);
+	}
+	
+	if (SpectatorTexture)
+	{
+		FIntRect DstRect = SpectatorDstViewRect;
+		FTexture2DRHIParamRef DstTexture = BackBuffer;
+		FIntRect SrcRect = SpectatorTextureRect;
+		if (DstRect.IsEmpty())
+		{
+			DstRect = FIntRect(0, 0, DstTexture->GetSizeX(), DstTexture->GetSizeY());
+		}
+
+		const uint32 ViewportWidth = DstRect.Width();
+		const uint32 ViewportHeight = DstRect.Height();
+		const FIntPoint TargetSize(ViewportWidth, ViewportHeight);
+
+		const float SrcTextureWidth = SpectatorTexture->GetTexture2D()->GetSizeX();
+		const float SrctextureHeight = SpectatorTexture->GetTexture2D()->GetSizeY();
+
+		FRHITexture* SrcTextureRHI = SpectatorTexture;
+		RHICmdList.TransitionResources(EResourceTransitionAccess::EReadable, &SrcTextureRHI, 1);
+		SetRenderTarget(RHICmdList, DstTexture, FTextureRHIRef());
+		RHICmdList.SetViewport(DstRect.Min.X, DstRect.Min.Y, 0, DstRect.Max.X, DstRect.Max.Y, 1.0f);
 		RHICmdList.SetBlendState(TStaticBlendState<>::GetRHI());
 		RHICmdList.SetRasterizerState(TStaticRasterizerState<>::GetRHI());
 		RHICmdList.SetDepthStencilState(TStaticDepthStencilState<false, CF_Always>::GetRHI());
 
-		const auto FeatureLevel = GMaxRHIFeatureLevel;
-		auto ShaderMap = GetGlobalShaderMap(FeatureLevel);
-
-		TShaderMapRef<FScreenVS> VertexShader(ShaderMap);
-		TShaderMapRef<FScreenPS> PixelShader(ShaderMap);
-
 		static FGlobalBoundShaderState BoundShaderState;
 		SetGlobalBoundShaderState(RHICmdList, FeatureLevel, BoundShaderState, RendererModule->GetFilterVertexDeclaration().VertexDeclarationRHI, *VertexShader, *PixelShader);
 
-		PixelShader->SetParameters(RHICmdList, TStaticSamplerState<SF_Bilinear>::GetRHI(), SrcTexture);
+		PixelShader->SetParameters(RHICmdList, TStaticSamplerState<SF_Bilinear>::GetRHI(), SrcTextureRHI);
 
 		if (WindowMirrorMode == 1)
 		{
-			// need to clear when rendering only one eye since the borders won't be touched by the DrawRect below
-			RHICmdList.ClearColorTexture(BackBuffer, FLinearColor::Black, FIntRect());
 
-			RendererModule->DrawRectangle(
-				RHICmdList,
-				ViewportWidth / 4, 0,
-				ViewportWidth / 2, ViewportHeight,
-				0.1f, 0.2f,
-				0.3f, 0.6f,
-				FIntPoint(ViewportWidth, ViewportHeight),
-				FIntPoint(1, 1),
-				*VertexShader,
-				EDRF_Default);
-		}
-		else if (WindowMirrorMode == 2)
-		{
 			RendererModule->DrawRectangle(
 				RHICmdList,
 				0, 0,
 				ViewportWidth, ViewportHeight,
-				0.0f, 0.0f,
-				1.0f, 1.0f,
-				FIntPoint(ViewportWidth, ViewportHeight),
+				0, 0,
+				1, 1,
+				TargetSize,
 				FIntPoint(1, 1),
 				*VertexShader,
 				EDRF_Default);
 		}
 	}
+
 }
 
 static void DrawOcclusionMesh(FRHICommandList& RHICmdList, EStereoscopicPass StereoPass, const FHMDViewMesh MeshAssets[])

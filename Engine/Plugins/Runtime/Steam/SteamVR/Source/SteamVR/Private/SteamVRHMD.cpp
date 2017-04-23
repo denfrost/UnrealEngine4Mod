@@ -1638,5 +1638,10 @@ const FSteamVRHMD::FTrackingFrame& FSteamVRHMD::GetTrackingFrame() const
 		return GameTrackingFrame;
 	}
 }
-
+#if ENGINE_MODUE4 == 0
+FSteamVRRenderDelegate* FSteamVRHMD::GetMirrorRenderDelegate()
+{
+	return &MirrorRenderDelegate;
+}
+#endif
 #endif //STEAMVR_SUPPORTED_PLATFORMS

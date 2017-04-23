@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "ISteamVRPlugin.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "IMotionController.h"
 #include "SteamVRFunctionLibrary.generated.h"
@@ -30,7 +31,9 @@ UCLASS()
 class STEAMVR_API USteamVRFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_UCLASS_BODY()
-
+#if ENGINE_MODUE4 == 0
+	static FSteamVRRenderDelegate* GetMirrorDelegate_RenderThread();
+#endif
 public:
 	
 	/**
