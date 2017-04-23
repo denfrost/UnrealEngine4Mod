@@ -631,17 +631,25 @@ void FWindowsPlatformSplash::Show()
 				// Set version info
 				{
 					const FText Version = FText::FromString( FEngineVersion::Current().ToString( FEngineBuildSettings::IsPerforceBuild() ? EVersionComponent::Branch : EVersionComponent::Patch ) );
-
+#if ENGINE_MODUE4 == 0
+					const FText ModVersion = FText::FromString(TEXT("MODUE4"));
+#endif
 					FText VersionInfo;
 					FText AppName;
 					if( GameName.IsEmpty() )
 					{
-						VersionInfo = FText::Format( NSLOCTEXT( "UnrealEd", "UnrealEdTitleWithVersionNoGameName_F", "Unreal Editor {0}" ), Version );
+						VersionInfo = FText::Format(NSLOCTEXT("UnrealEd", "UnrealEdTitleWithVersionNoGameName_F", "Unreal Editor {0}"), Version);
+#if ENGINE_MODUE4 == 0
+						VersionInfo = FText::Format(NSLOCTEXT("UnrealEd", "UnrealEdTitleWithVersionNoGameName_F", "{1} Unreal Editor {0}"), Version, ModVersion);
+#endif
 						AppName = NSLOCTEXT( "UnrealEd", "UnrealEdTitleNoGameName_F", "Unreal Editor" );
 					}
 					else
 					{
-						VersionInfo = FText::Format( NSLOCTEXT( "UnrealEd", "UnrealEdTitleWithVersion_F", "Unreal Editor {0}  -  {1}" ), Version, GameName );
+						VersionInfo = FText::Format(NSLOCTEXT("UnrealEd", "UnrealEdTitleWithVersion_F", "Unreal Editor {0}  -  {1}"), Version, GameName);
+#if ENGINE_MODUE4 == 0
+						VersionInfo = FText::Format( NSLOCTEXT( "UnrealEd", "UnrealEdTitleWithVersion_F", "{2} Unreal Editor {0}  -  {1}" ), Version, GameName, ModVersion);
+#endif
 						AppName = FText::Format( NSLOCTEXT( "UnrealEd", "UnrealEdTitle_F", "Unreal Editor - {0}" ), GameName );
 					}
 
