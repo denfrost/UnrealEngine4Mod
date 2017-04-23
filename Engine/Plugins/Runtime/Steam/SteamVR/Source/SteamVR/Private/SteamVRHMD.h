@@ -48,6 +48,9 @@ public:
 
 	virtual bool IsHMDConnected() override { return true; }
 	virtual bool IsHMDEnabled() const override;
+#if ENGINE_MODUE4 == 0
+	bool IsHMDDisabled() const;
+#endif
 	virtual EHMDWornState::Type GetHMDWornState() override;
 	virtual void EnableHMD(bool allow = true) override;
 	virtual EHMDDeviceType::Type GetHMDDeviceType() const override;
